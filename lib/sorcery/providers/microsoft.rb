@@ -1,31 +1,42 @@
 module Sorcery
   module Providers
-    # This class adds support for OAuth with salesforce.com.
+    # This class adds support for OAuth with Microsoft Graph.
     #
-    #   config.salesforce.key = <key>
-    #   config.salesforce.secret = <secret>
+    #   config.microsoft.key = <key>
+    #   config.microsoft.secret = <secret>
     #   ...
     #
-    class Salesforce < Base
+    class Microsoft < Base
       include Protocols::Oauth2
 
-      attr_accessor :auth_url, :token_url, :scope
+      attr_accessor :auth_url, :scope, :token_url, :user_info_url
 
       def initialize
         super
 
-        @site          = 'https://login.salesforce.com'
-        @auth_url      = '/services/oauth2/authorize'
-        @token_url     = '/services/oauth2/token'
+        @site          = 'https://login.microsoftonline.com'
+        @auth_url      = '/common/oauth2/v2.0/authorize'
+        @token_url     = '/common/oauth2/v2.0/token'
+        @user_info_url = 'https://graph.microsoft.com/v1.0/me'
+        @scope         = 'openid email https://graph.microsoft.com/User.Read'
+        @state         = SecureRandom.hex(16)
+      end
+
+      def authorize_url(options = {})
+        oauth_params = {
+          client_id: @key,
+          response_type: 'code'
+        }
+        options.merge!(oauth_params)
+        super(options)
       end
 
       def get_user_hash(access_token)
-        user_info_url = access_token.params['id']
         response = access_token.get(user_info_url)
 
         auth_hash(access_token).tap do |h|
           h[:user_info] = JSON.parse(response.body)
-          h[:uid] = h[:user_info]['user_id']
+          h[:uid] = h[:user_info]['id']
         end
       end
 
