@@ -1,7 +1,6 @@
 require 'sorcery/version'
 
 module Sorcery
-
   require 'sorcery/model'
 
   module Adapters
@@ -11,7 +10,6 @@ module Sorcery
   module Model
     require 'sorcery/model/temporary_token'
     require 'sorcery/model/config'
-
 
     module Submodules
       require 'sorcery/model/submodules/user_activation'
@@ -64,12 +62,11 @@ module Sorcery
     module Internal
       require 'sorcery/test_helpers/internal/rails'
     end
-
   end
 
   require 'sorcery/adapters/base_adapter'
 
-  if defined?(ActiveRecord)
+  if defined?(ActiveRecord::Base)
     require 'sorcery/adapters/active_record_adapter'
     ActiveRecord::Base.extend Sorcery::Model
 
@@ -79,6 +76,19 @@ module Sorcery
 
     ActiveRecord::Base.send :define_singleton_method, :sorcery_adapter do
       Sorcery::Adapters::ActiveRecordAdapter.from(self)
+    end
+  end
+
+  if defined?(Mongoid::Document)
+    require 'sorcery/adapters/mongoid_adapter'
+    Mongoid::Document::ClassMethods.send :include, Sorcery::Model
+
+    Mongoid::Document.send :define_method, :sorcery_adapter do
+      @sorcery_adapter ||= Sorcery::Adapters::MongoidAdapter.new(self)
+    end
+
+    Mongoid::Document::ClassMethods.send :define_method, :sorcery_adapter do
+      Sorcery::Adapters::MongoidAdapter.from(self)
     end
   end
 
